@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: make universal
+      - name: Package release
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          codesign --force --sign - .build/release/wacom-recovery-universal
+          mkdir -p "dist/wacom-cintiq-reconnect-fix-${VERSION}"
+          cp .build/release/wacom-recovery-universal "dist/wacom-cintiq-reconnect-fix-${VERSION}/wacom-recovery"
+          cp README.md LICENSE "dist/wacom-cintiq-reconnect-fix-${VERSION}/"
+          ditto -c -k --keepParent "dist/wacom-cintiq-reconnect-fix-${VERSION}" "dist/wacom-cintiq-reconnect-fix-${VERSION}-universal.zip"
+          shasum -a 256 "dist/wacom-cintiq-reconnect-fix-${VERSION}-universal.zip" > "dist/wacom-cintiq-reconnect-fix-${VERSION}-universal.zip.sha256"
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/*.zip dist/*.sha256 --verify-tag --generate-notes --title "${GITHUB_REF_NAME}"

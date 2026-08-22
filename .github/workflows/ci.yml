@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: make universal
+      - name: Check binary architectures
+        run: test "$(lipo -archs .build/release/wacom-recovery-universal)" = "x86_64 arm64" || test "$(lipo -archs .build/release/wacom-recovery-universal)" = "arm64 x86_64"
+      - name: Validate LaunchAgent
+        run: plutil -lint launchd/com.local.wacom-recovery.plist
+      - name: Check shell scripts
+        run: zsh -n scripts/install.sh scripts/uninstall.sh
