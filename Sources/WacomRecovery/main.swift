@@ -261,10 +261,6 @@ private final class DeviceMonitor {
     }
 
     private func driverClaimed(_ device: io_service_t) -> Bool {
-        if propertyDescription(device, key: "IOUserClientCreator").contains(driverClaimMarker) {
-            return true
-        }
-
         var iterator: io_iterator_t = 0
         let result = IORegistryEntryCreateIterator(
             device,
@@ -279,7 +275,11 @@ private final class DeviceMonitor {
             let entry = IOIteratorNext(iterator)
             guard entry != 0 else { break }
             defer { IOObjectRelease(entry) }
-            if propertyDescription(entry, key: "IOUserClientCreator").contains(driverClaimMarker) {
+
+            // A USB-level user client can be an inspection handle, not a driver claim.
+            let className = IOObjectCopyClass(entry).takeRetainedValue() as String
+            if className == "IOHIDLibUserClient",
+               propertyDescription(entry, key: "IOUserClientCreator").contains(driverClaimMarker) {
                 return true
             }
         }

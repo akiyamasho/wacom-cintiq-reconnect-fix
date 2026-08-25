@@ -17,8 +17,8 @@ display reconnects normally but Wacom Center says no tablet is connected.
 
 The helper does **not poll**. It sleeps until IOKit reports a USB attach or
 detach event. After an attach, it gives the official driver three seconds to
-initialize, checks whether `WacomTabletDrive` claimed the device, and restarts
-only the relevant Wacom user services if the claim failed.
+initialize, checks for a Wacom-created HID client, and restarts only the
+relevant Wacom user services if the HID claim failed.
 
 > [!NOTE]
 > This is an independent community workaround, not an official Wacom product.
@@ -58,7 +58,9 @@ The recovery is deliberately narrow:
 
 1. Match Wacom USB vendor ID `0x056a` and the configured product name.
 2. Wait for ordinary Wacom initialization to finish.
-3. Search that USB device's IOService subtree for `WacomTabletDrive`.
+3. Search that USB device's IOService subtree for an `IOHIDLibUserClient`
+   created by `WacomTabletDrive`. A USB-level inspection handle alone is not a
+   tablet claim.
 4. If missing, run `launchctl kickstart -k` for:
    - `com.wacom.wacomtablet`
    - `com.wacom.DataStoreMgr`
